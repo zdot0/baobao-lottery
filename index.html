@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Year of the Horse Lottery</title>
+    <style>
+        :root {
+            --cny-red: #da251d;
+            --cny-dark-red: #8b0000;
+            --cny-gold: #fec33a;
+            --cny-light-gold: #ffdf85;
+        }
+
+        body {
+            background-color: var(--cny-dark-red);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: var(--cny-gold);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 5px;
+        }
+
+        p.subtitle {
+            color: var(--cny-light-gold);
+            margin-top: 0;
+            margin-bottom: 30px;
+        }
+
+        .envelope-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 120px));
+            gap: 20px;
+            width: 100%;
+            max-width: 600px;
+            justify-content: center;
+        }
+
+        .envelope {
+            width: 100%;
+            aspect-ratio: 2 / 3;
+            background: linear-gradient(135deg, var(--cny-red), #b31b1b);
+            border: 2px solid var(--cny-gold);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.4);
+            transition: all 0.3s ease;
+            transform-style: preserve-3d;
+        }
+
+        .envelope:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 20px rgba(0,0,0,0.6);
+        }
+
+        .envelope::before {
+            content: "福"; /* 'Fu' meaning Good Fortune */
+            font-size: 3rem;
+            color: var(--cny-gold);
+            font-family: serif;
+        }
+
+        .envelope.opened {
+            background: #fff;
+            border-color: #ccc;
+            cursor: default;
+            transform: scale(0.95);
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .envelope.opened::before {
+            display: none;
+        }
+
+        .prize-text {
+            display: none;
+            color: var(--cny-red);
+            font-weight: bold;
+            font-size: 1.1rem;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .envelope.opened .prize-text {
+            display: block;
+            animation: popIn 0.5s ease;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .controls {
+            margin-top: 40px;
+        }
+
+        button {
+            background-color: var(--cny-gold);
+            color: var(--cny-dark-red);
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--cny-light-gold);
+        }
+
+        /* Modal Styles */
+        #prizeModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, var(--cny-red), #b31b1b);
+            border: 4px solid var(--cny-gold);
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            width: 80%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .modal-content h2 {
+            color: var(--cny-gold);
+            margin-top: 0;
+        }
+
+        .modal-content p {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .close-modal {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🧧 2026 Year of the Horse Lottery 🧧</h1>
+    <p class="subtitle">Pick a Red Envelope to reveal your fortune!</p>
+
+    <div class="envelope-container" id="grid"></div>
+
+    <div class="controls">
+        <button onclick="resetGame()">Reset Board</button>
+    </div>
+
+    <div id="prizeModal">
+        <div class="modal-content">
+            <h2>Congratulations!</h2>
+            <p id="modalPrizeText">You won!</p>
+            <button class="close-modal" onclick="closeModal()">Claim Prize</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const totalEnvelopes = 12;
+
+        // Weighted Prize Pool
+        // The 'weight' determines how likely a prize is to be picked.
+        const prizes = [
+            { name: "Grand Prize: $100!", weight: 2 },   // 2% chance
+            { name: "Gift Card: $20", weight: 8 },       // 8% chance
+            { name: "Lucky Coin", weight: 30 },          // 30% chance
+            { name: "Good Fortune", weight: 60 }         // 60% chance
+        ];
+
+        // Logic to select a prize based on weight
+        function drawPrize() {
+            const totalWeight = prizes.reduce((sum, prize) => sum + prize.weight, 0);
+            let randomNum = Math.random() * totalWeight;
+            
+            for (const prize of prizes) {
+                if (randomNum < prize.weight) {
+                    return prize.name;
+                }
+                randomNum -= prize.weight;
+            }
+        }
+
+        function initGame() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = ''; // Clear existing grid
+
+            for (let i = 0; i < totalEnvelopes; i++) {
+                const env = document.createElement('div');
+                env.className = 'envelope';
+                
+                const prizeText = document.createElement('div');
+                prizeText.className = 'prize-text';
+                
+                env.appendChild(prizeText);
+
+                env.onclick = function() {
+                    if (!this.classList.contains('opened')) {
+                        // Determine prize at the exact moment of click
+                        const wonPrize = drawPrize();
+                        
+                        this.classList.add('opened');
+                        prizeText.innerText = wonPrize;
+                        
+                        // Show celebration modal
+                        setTimeout(() => showModal(wonPrize), 300);
+                    }
+                };
+                grid.appendChild(env);
+            }
+        }
+
+        function showModal(prizeName) {
+            document.getElementById('modalPrizeText').innerText = prizeName;
+            document.getElementById('prizeModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('prizeModal').style.display = 'none';
+        }
+
+        function resetGame() {
+            if(confirm("Are you sure you want to reset the board?")) {
+                initGame();
+            }
+        }
+
+        // Start the game on load
+        initGame();
+    </script>
+</body>
+</html>
