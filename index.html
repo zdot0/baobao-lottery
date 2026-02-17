@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2026 金马迎春大抽奖 (测试版)</title>
+    <title>2026大年初一 baobao lottery</title>
     <style>
         :root {
             --cny-red: #da251d;
@@ -282,7 +282,7 @@
 </head>
 <body>
 
-    <h1>🧧 2026 金马迎春大抽奖 🧧</h1>
+    <h1>🧧 2026大年初一 baobao lottery 🧧</h1>
 
     <div id="countdown-section">
         <p class="subtitle" id="status-text">距离抽奖开始还有</p>
@@ -324,23 +324,23 @@
 
     <script>
         // ================= 配置区域 =================
-        // !!! 测试时间 !!! 设置为今天 1:03 PM (ET)
-        // 测试完毕后，请改回 "2026-02-17T21:00:00-05:00"
-        const targetDateString = "2026-02-17T13:03:00-05:00"; 
-        
-        const totalEnvelopes = 12;
-        const maxPurchases = 3; // 最大购买次数
+        const targetDateString = "2026-02-17T22:00:00-05:00"; // 今晚 10:00 PM ET
+        const maxPurchases = 3; 
 
-        const prizes = [
-            { name: "特等奖：$100 大红包！yayyyyyy!", weight: 2 },
-            { name: "一等奖：$20 小红包！woohoooo!", weight: 8 },
-            { name: "二等奖：亲亲！kissssyyyyy!", weight: 30 },
-            { name: "三等奖：抱抱！hugggyyyyyy!", weight: 60 }
+        // 奖池配置：这里定义了 12 个红包里具体藏了什么
+        // count 的总和必须等于 12
+        const prizeConfig = [
+            { name: "特等奖：$100 大红包！yayyyyyy!", count: 1 },
+            { name: "一等奖：$20 小红包！woohoooo!", count: 2 },
+            { name: "二等奖：亲亲！kissssyyyyy!", count: 4 },
+            { name: "三等奖：抱抱！hugggyyyyyy!", count: 5 }
         ];
+        // 1+2+4+5 = 12 个奖品
 
         // ================= 状态变量 =================
         let chancesLeft = 0;
         let boughtTotal = 0;
+        let shuffledPrizePool = []; // 存储洗好的牌
 
         // ================= 倒计时逻辑 =================
         const countDownDate = new Date(targetDateString).getTime();
@@ -396,11 +396,9 @@
         }
 
         function updateUI() {
-            // 更新数字显示
             document.getElementById("chance-display").innerText = chancesLeft;
             document.getElementById("bought-count").innerText = boughtTotal;
 
-            // 更新按钮状态
             const btn = document.getElementById("buy-btn");
             if (boughtTotal >= maxPurchases) {
                 btn.disabled = true;
@@ -409,7 +407,6 @@
                 btn.style.color = "#666";
             }
 
-            // 更新红包状态
             const envelopes = document.querySelectorAll('.envelope');
             envelopes.forEach(env => {
                 if (!env.classList.contains('opened')) {
@@ -424,14 +421,23 @@
             });
         }
 
-        // ================= 抽奖逻辑 =================
-        function drawPrize() {
-            const totalWeight = prizes.reduce((sum, prize) => sum + prize.weight, 0);
-            let randomNum = Math.random() * totalWeight;
-            for (const prize of prizes) {
-                if (randomNum < prize.weight) return prize.name;
-                randomNum -= prize.weight;
+        // ================= 奖池逻辑 (洗牌算法) =================
+        // 生成并打乱奖池
+        function generateAndShufflePool() {
+            let pool = [];
+            // 根据配置生成所有奖品
+            prizeConfig.forEach(item => {
+                for(let i=0; i<item.count; i++) {
+                    pool.push(item.name);
+                }
+            });
+
+            // Fisher-Yates 洗牌算法
+            for (let i = pool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pool[i], pool[j]] = [pool[j], pool[i]];
             }
+            return pool;
         }
 
         function initGame() {
@@ -439,13 +445,20 @@
             if (grid.children.length > 0) return;
 
             grid.innerHTML = ''; 
+            
+            // 1. 生成洗好的奖池
+            shuffledPrizePool = generateAndShufflePool();
 
-            for (let i = 0; i < totalEnvelopes; i++) {
+            // 2. 将奖品绑定到每一个红包上
+            for (let i = 0; i < shuffledPrizePool.length; i++) {
                 const env = document.createElement('div');
                 env.className = 'envelope';
                 const prizeText = document.createElement('div');
                 prizeText.className = 'prize-text';
                 env.appendChild(prizeText);
+
+                // 重点：奖品在初始化时就已经确定了
+                const thisEnvelopePrize = shuffledPrizePool[i];
 
                 env.onclick = function() {
                     if (this.classList.contains('opened')) return;
@@ -455,16 +468,16 @@
                         return;
                     }
 
-                    const wonPrize = drawPrize();
+                    // 开奖
                     this.classList.add('opened');
                     this.classList.remove('active-state'); 
                     
-                    prizeText.innerText = wonPrize;
+                    prizeText.innerText = thisEnvelopePrize;
                     
                     chancesLeft--;
                     updateUI();
 
-                    setTimeout(() => showModal(wonPrize), 300);
+                    setTimeout(() => showModal(thisEnvelopePrize), 300);
                 };
                 grid.appendChild(env);
             }
@@ -481,7 +494,7 @@
         }
 
         function resetGame() {
-            if(confirm("管理员操作：\n确定要重置所有数据吗？(包括购买次数)")) {
+            if(confirm("管理员操作：\n确定要重置所有数据吗？(所有红包会重新洗牌)")) {
                 const grid = document.getElementById('grid');
                 grid.innerHTML = '';
                 boughtTotal = 0;
