@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Year of the Horse Lottery</title>
+    <title>2026 金马迎春大抽奖</title>
     <style>
         :root {
             --cny-red: #da251d;
@@ -14,7 +14,8 @@
 
         body {
             background-color: var(--cny-dark-red);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* 优先使用中文常见字体 */
+            font-family: "Microsoft YaHei", "SimHei", "PingFang SC", sans-serif;
             text-align: center;
             color: white;
             margin: 0;
@@ -28,12 +29,14 @@
             color: var(--cny-gold);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
             margin-bottom: 5px;
+            font-size: 2rem;
         }
 
         p.subtitle {
             color: var(--cny-light-gold);
             margin-top: 0;
             margin-bottom: 30px;
+            font-size: 1.1rem;
         }
 
         .envelope-container {
@@ -66,11 +69,13 @@
             box-shadow: 0 12px 20px rgba(0,0,0,0.6);
         }
 
+        /* 红包封面上的“福”字 */
         .envelope::before {
-            content: "福"; /* 'Fu' meaning Good Fortune */
+            content: "福";
             font-size: 3rem;
             color: var(--cny-gold);
-            font-family: serif;
+            font-family: "Kaiti", "STKaiti", serif; /* 尝试使用楷体，更有书法感 */
+            font-weight: bold;
         }
 
         .envelope.opened {
@@ -92,6 +97,7 @@
             font-size: 1.1rem;
             text-align: center;
             padding: 10px;
+            line-height: 1.4;
         }
 
         .envelope.opened .prize-text {
@@ -113,7 +119,7 @@
             background-color: var(--cny-gold);
             color: var(--cny-dark-red);
             border: none;
-            padding: 12px 24px;
+            padding: 12px 30px;
             font-size: 1.1rem;
             font-weight: bold;
             border-radius: 25px;
@@ -126,7 +132,7 @@
             background-color: var(--cny-light-gold);
         }
 
-        /* Modal Styles */
+        /* 弹窗样式 */
         #prizeModal {
             display: none;
             position: fixed;
@@ -151,51 +157,54 @@
         .modal-content h2 {
             color: var(--cny-gold);
             margin-top: 0;
+            font-size: 2rem;
         }
 
         .modal-content p {
             font-size: 1.5rem;
             font-weight: bold;
+            color: white;
+            margin: 20px 0;
         }
 
         .close-modal {
-            margin-top: 20px;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
 
-    <h1>🧧 2026 Year of the Horse Lottery 🧧</h1>
-    <p class="subtitle">Pick a Red Envelope to reveal your fortune!</p>
+    <h1>🧧 2026 金马迎春大抽奖 🧧</h1>
+    <p class="subtitle">点击任意红包，开启您的新年好运！</p>
 
     <div class="envelope-container" id="grid"></div>
 
     <div class="controls">
-        <button onclick="resetGame()">Reset Board</button>
+        <button onclick="resetGame()">🔄 重置抽奖盘</button>
     </div>
 
     <div id="prizeModal">
         <div class="modal-content">
-            <h2>Congratulations!</h2>
-            <p id="modalPrizeText">You won!</p>
-            <button class="close-modal" onclick="closeModal()">Claim Prize</button>
+            <h2>🎉 恭喜中奖！🎉</h2>
+            <p id="modalPrizeText">奖品名称</p>
+            <button class="close-modal" onclick="closeModal()">开心收下</button>
         </div>
     </div>
 
     <script>
-        // Configuration
+        // 红包总数
         const totalEnvelopes = 12;
 
-        // Weighted Prize Pool
-        // The 'weight' determines how likely a prize is to be picked.
+        // 奖品池与权重配置 (权重 weight 越大，中奖概率越高)
+        // 你可以在这里自由修改奖品名称
         const prizes = [
-            { name: "Grand Prize: $100!", weight: 2 },   // 2% chance
-            { name: "Gift Card: $20", weight: 8 },       // 8% chance
-            { name: "Lucky Coin", weight: 30 },          // 30% chance
-            { name: "Good Fortune", weight: 60 }         // 60% chance
+            { name: "特等奖：$100 大红包！", weight: 2 },   // 2% 概率
+            { name: "幸运奖：$20 礼品卡", weight: 8 },      // 8% 概率
+            { name: "纪念奖：幸运金币", weight: 30 },       // 30% 概率
+            { name: "祝福奖：大吉大利", weight: 60 }        // 60% 概率
         ];
 
-        // Logic to select a prize based on weight
+        // 随机抽取奖品逻辑
         function drawPrize() {
             const totalWeight = prizes.reduce((sum, prize) => sum + prize.weight, 0);
             let randomNum = Math.random() * totalWeight;
@@ -210,7 +219,7 @@
 
         function initGame() {
             const grid = document.getElementById('grid');
-            grid.innerHTML = ''; // Clear existing grid
+            grid.innerHTML = ''; // 清空现有网格
 
             for (let i = 0; i < totalEnvelopes; i++) {
                 const env = document.createElement('div');
@@ -223,13 +232,13 @@
 
                 env.onclick = function() {
                     if (!this.classList.contains('opened')) {
-                        // Determine prize at the exact moment of click
+                        // 点击瞬间决定奖品
                         const wonPrize = drawPrize();
                         
                         this.classList.add('opened');
                         prizeText.innerText = wonPrize;
                         
-                        // Show celebration modal
+                        // 延迟 300 毫秒显示弹窗，增强体验
                         setTimeout(() => showModal(wonPrize), 300);
                     }
                 };
@@ -247,12 +256,12 @@
         }
 
         function resetGame() {
-            if(confirm("Are you sure you want to reset the board?")) {
+            if(confirm("确定要重置抽奖盘吗？所有红包将恢复原状。")) {
                 initGame();
             }
         }
 
-        // Start the game on load
+        // 页面加载时初始化游戏
         initGame();
     </script>
 </body>
