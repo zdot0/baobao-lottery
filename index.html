@@ -14,7 +14,6 @@
 
         body {
             background-color: var(--cny-dark-red);
-            /* 优先使用中文常见字体 */
             font-family: "Microsoft YaHei", "SimHei", "PingFang SC", sans-serif;
             text-align: center;
             color: white;
@@ -23,6 +22,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
         }
 
         h1 {
@@ -37,6 +37,45 @@
             margin-top: 0;
             margin-bottom: 30px;
             font-size: 1.1rem;
+        }
+
+        /* 倒计时样式 */
+        #countdown-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
+        }
+
+        .timer-box {
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--cny-gold);
+            border-radius: 15px;
+            padding: 20px 40px;
+            margin-top: 20px;
+            box-shadow: 0 0 20px rgba(254, 195, 58, 0.2);
+        }
+
+        .timer-display {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--cny-gold);
+            font-family: monospace; /* 等宽字体防止数字跳动 */
+        }
+        
+        .timer-label {
+            font-size: 1rem;
+            color: white;
+            margin-top: 10px;
+        }
+
+        /* 游戏区域 (初始隐藏) */
+        #game-area {
+            display: none; /* 默认隐藏，等倒计时结束显示 */
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .envelope-container {
@@ -69,12 +108,11 @@
             box-shadow: 0 12px 20px rgba(0,0,0,0.6);
         }
 
-        /* 红包封面上的“福”字 */
         .envelope::before {
             content: "福";
             font-size: 3rem;
             color: var(--cny-gold);
-            font-family: "Kaiti", "STKaiti", serif; /* 尝试使用楷体，更有书法感 */
+            font-family: "Kaiti", "STKaiti", serif;
             font-weight: bold;
         }
 
@@ -166,49 +204,104 @@
             color: white;
             margin: 20px 0;
         }
-
-        .close-modal {
-            margin-top: 10px;
-        }
     </style>
 </head>
 <body>
 
     <h1>🧧 2026 金马迎春大抽奖 🧧</h1>
-    <p class="subtitle">点击任意红包，开启您的新年好运！</p>
 
-    <div class="envelope-container" id="grid"></div>
+    <div id="countdown-section">
+        <p class="subtitle" id="status-text">距离抽奖开始还有</p>
+        <div class="timer-box">
+            <div class="timer-display" id="timer">--:--:--</div>
+            <div class="timer-label">小时 : 分钟 : 秒</div>
+        </div>
+    </div>
 
-    <div class="controls">
-        <button onclick="resetGame()">🔄 重置抽奖盘</button>
+    <div id="game-area" style="display: none;">
+        <p class="subtitle">点击任意红包，开启您的新年好运！</p>
+        <div class="envelope-container" id="grid"></div>
+        <div class="controls">
+            <button onclick="resetGame()">🔄 重置抽奖盘</button>
+        </div>
     </div>
 
     <div id="prizeModal">
         <div class="modal-content">
             <h2>🎉 恭喜中奖！🎉</h2>
             <p id="modalPrizeText">奖品名称</p>
-            <button class="close-modal" onclick="closeModal()">开心收下</button>
+            <button onclick="closeModal()" style="margin-top: 20px;">开心收下</button>
         </div>
     </div>
 
     <script>
+        // ================= 配置区域 =================
+
+        // 设定目标时间：2026年2月17日 晚上9点 (ET美东时间)
+        // 格式: YYYY-MM-DDTHH:mm:ss-05:00 (美东冬令时是-05:00)
+        const targetDateString = "2026-02-17T21:00:00-05:00"; 
+        
         // 红包总数
         const totalEnvelopes = 12;
 
-        // 奖品池与权重配置 (权重 weight 越大，中奖概率越高)
-        // 你可以在这里自由修改奖品名称
+        // 奖品配置 (权重越大越容易中)
         const prizes = [
-            { name: "特等奖：$100 大红包！", weight: 2 },   // 2% 概率
-            { name: "幸运奖：$20 礼品卡", weight: 8 },      // 8% 概率
-            { name: "纪念奖：幸运金币", weight: 30 },       // 30% 概率
-            { name: "祝福奖：大吉大利", weight: 60 }        // 60% 概率
+            { name: "特等奖：$100 大红包！yayyyyyy!", weight: 2 },
+            { name: "一等奖：$20 小红包！woohoooo!", weight: 8 },
+            { name: "二等奖：亲亲！kissssyyyyy!", weight: 30 },
+            { name: "三等奖：抱抱！hugggyyyyyy!", weight: 60 }
         ];
 
-        // 随机抽取奖品逻辑
+        // ================= 倒计时逻辑 =================
+
+        const countDownDate = new Date(targetDateString).getTime();
+        const countdownSection = document.getElementById("countdown-section");
+        const gameArea = document.getElementById("game-area");
+        const timerDisplay = document.getElementById("timer");
+
+        // 每秒更新一次
+        const x = setInterval(function() {
+            const now = new Date().getTime();
+            const distance = countDownDate - now;
+
+            // 计算时分秒
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            // 补零显示 (例如 9 -> 09)
+            const h = hours < 10 ? "0" + hours : hours;
+            const m = minutes < 10 ? "0" + minutes : minutes;
+            const s = seconds < 10 ? "0" + seconds : seconds;
+
+            timerDisplay.innerHTML = h + " : " + m + " : " + s;
+
+            // 如果倒计时结束
+            if (distance < 0) {
+                clearInterval(x);
+                unlockGame();
+            }
+        }, 1000);
+
+        // 如果时间已到，切换显示
+        function unlockGame() {
+            countdownSection.style.display = "none";
+            gameArea.style.display = "flex";
+            initGame(); // 初始化红包
+        }
+
+        // 页面加载时立即检查一次，防止闪烁
+        const nowInit = new Date().getTime();
+        if (nowInit > countDownDate) {
+            clearInterval(x); // 停止倒计时
+            unlockGame();
+        }
+
+        // ================= 游戏逻辑 =================
+
         function drawPrize() {
             const totalWeight = prizes.reduce((sum, prize) => sum + prize.weight, 0);
             let randomNum = Math.random() * totalWeight;
-            
             for (const prize of prizes) {
                 if (randomNum < prize.weight) {
                     return prize.name;
@@ -219,26 +312,22 @@
 
         function initGame() {
             const grid = document.getElementById('grid');
-            grid.innerHTML = ''; // 清空现有网格
+            if (grid.children.length > 0) return; // 防止重复初始化
+
+            grid.innerHTML = ''; 
 
             for (let i = 0; i < totalEnvelopes; i++) {
                 const env = document.createElement('div');
                 env.className = 'envelope';
-                
                 const prizeText = document.createElement('div');
                 prizeText.className = 'prize-text';
-                
                 env.appendChild(prizeText);
 
                 env.onclick = function() {
                     if (!this.classList.contains('opened')) {
-                        // 点击瞬间决定奖品
                         const wonPrize = drawPrize();
-                        
                         this.classList.add('opened');
                         prizeText.innerText = wonPrize;
-                        
-                        // 延迟 300 毫秒显示弹窗，增强体验
                         setTimeout(() => showModal(wonPrize), 300);
                     }
                 };
@@ -256,13 +345,12 @@
         }
 
         function resetGame() {
-            if(confirm("确定要重置抽奖盘吗？所有红包将恢复原状。")) {
+            if(confirm("确定要重置抽奖盘吗？")) {
+                const grid = document.getElementById('grid');
+                grid.innerHTML = '';
                 initGame();
             }
         }
-
-        // 页面加载时初始化游戏
-        initGame();
     </script>
 </body>
 </html>
